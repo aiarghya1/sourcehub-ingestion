@@ -308,10 +308,37 @@ enum and data model already anticipate this — no schema change needed.
 
 ---
 
+## Security & performance
+
+**Security posture (for this exercise's scope):**
+
+- **SQL injection** — every query is parameterized; only `$N` placeholder *indexes* are
+  ever string-built, never user values (verified in `repository.ts`).
+- **XSS** — the React UI renders all data as escaped text (no `dangerouslySetInnerHTML`,
+  `innerHTML`, or `eval`).
+- **Prototype pollution** — CSV/JSON header keys of `__proto__` / `constructor` /
+  `prototype` are neutralized before being used as object keys (`parse.ts`, with a test).
+- **Error leakage** — the error middleware logs details server-side and returns a generic
+  envelope; stack traces never reach the client.
+- **Input bounds** — request bodies are capped at 10 MB.
+- **Dependency audit** — `npm audit` reports findings only in the **dev toolchain**
+  (esbuild/vite/vitest dev server); nothing vulnerable ships in the production bundle.
+- **Out of scope** (per the brief): authentication, authorization/multi-tenancy, and rate
+  limiting — see below for how I'd add them.
+
+**Performance:**
+
+- Ingestion uses **chunked bulk `INSERT`s** (records and issues), so a file costs
+  `O(chunks)` round-trips instead of `O(rows)`. A 3000-row file ingests in well under a
+  second on the embedded engine (covered by a test).
+- Read paths are indexed for the hot queries (records by batch and by status; issues by
+  record/batch), and per-record issue counts are denormalized so the table renders without
+  aggregation.
+
 ## Testing
 
 ```bash
-npm test        # Vitest: 23 tests across parse / validate / api
+npm test        # Vitest: 26 tests across parse / validate / api
 npm run typecheck
 ```
 
@@ -327,8 +354,12 @@ npm run typecheck
 ## Known limitations & what I'd improve
 
 - **Synchronous ingestion** — see the async plan in the architecture notes.
-- **Auth / multi-tenancy** — out of scope per the brief; production would scope batches to
-  an org/user and gate the API.
+- **Money as float** — `gross_sales` is currently stored as a JS number. For a tax product
+  this should be a fixed-precision `NUMERIC`/decimal (IEEE-754 floats are lossy for
+  currency). The validation layer already isolates parsing, so this is a contained change:
+  keep the string, store `NUMERIC`, and compare with a decimal library.
+- **Auth / multi-tenancy / rate limiting** — out of scope per the brief; production would
+  scope batches to an org/user, gate the API, and rate-limit ingestion.
 - **File upload** goes through a JSON body (frontend reads file text). Production would use
   streamed multipart upload for large files and store the original blob (S3) for audit.
 - **Pagination** exists in the API but the UI loads a generous page; production would add

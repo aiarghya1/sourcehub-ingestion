@@ -16,6 +16,10 @@ export interface ParseResult {
 export class EmptyDatasetError extends Error {}
 export class InvalidFormatError extends Error {}
 
+/** Header keys that could pollute Object.prototype if used as plain-object keys. */
+const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+const safeKey = (key: string): string => (UNSAFE_KEYS.has(key) ? `_${key}` : key);
+
 /**
  * RFC4180-ish CSV tokenizer. Handles quoted fields, escaped quotes (""),
  * embedded commas, and CRLF/LF line endings. Returns rows as raw string arrays
@@ -87,7 +91,7 @@ export function parseCsv(text: string): ParseResult {
     const malformed = cells.length !== header.length;
     const rawObj: RawRecord = {};
     header.forEach((key, i) => {
-      rawObj[key] = (cells[i] ?? "").trim();
+      rawObj[safeKey(key)] = (cells[i] ?? "").trim();
     });
     return { rowNumber: idx + 1, cells, raw: rawObj, malformed };
   });
@@ -122,7 +126,7 @@ export function parseJson(text: string): ParseResult {
     if (!malformed) {
       for (const key of header) {
         const val = (row as Record<string, unknown>)[key];
-        rawObj[key] = val == null ? "" : String(val).trim();
+        rawObj[safeKey(key)] = val == null ? "" : String(val).trim();
       }
     }
     return { rowNumber: idx + 1, cells: Object.values(rawObj), raw: rawObj, malformed };

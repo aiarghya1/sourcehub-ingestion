@@ -104,4 +104,21 @@ describe("ingestion API", () => {
     const res = await fetch(`${base}/api/batches/does-not-exist`);
     expect(res.status).toBe(404);
   });
+
+  it("ingests a large dataset via bulk insert with correct counts", async () => {
+    const header =
+      "source_row_id,client_name,entity_name,state,jurisdiction_type,tax_year,period_start,period_end,gross_sales,transaction_count,filing_frequency,nexus_indicator,notes";
+    const lines: string[] = [header];
+    for (let i = 1; i <= 3000; i++) {
+      lines.push(`${i},Client ${i},Entity ${i},CO,State,2025,2025-01-01,2025-03-31,1000.00,10,Quarterly,Yes,`);
+    }
+    const { status, json } = await post("/api/batches", {
+      sourceLabel: "Bulk",
+      format: "csv",
+      content: lines.join("\n"),
+    });
+    expect(status).toBe(201);
+    expect(json.batch.totals.total).toBe(3000);
+    expect(json.batch.totals.valid).toBe(3000);
+  });
 });

@@ -56,6 +56,33 @@ function json<T>(value: unknown): T {
   return typeof value === "string" ? (JSON.parse(value) as T) : (value as T);
 }
 
+/**
+ * Multi-row INSERT in chunks, so ingesting N records costs O(chunks) round-trips
+ * instead of O(N). Chunked to stay well under Postgres' 65535 bound-parameter limit.
+ */
+async function bulkInsert(
+  q: Db,
+  table: string,
+  columns: string[],
+  rows: unknown[][],
+): Promise<void> {
+  if (rows.length === 0) return;
+  const maxParams = 60000;
+  const chunkSize = Math.max(1, Math.floor(maxParams / columns.length));
+  for (let start = 0; start < rows.length; start += chunkSize) {
+    const chunk = rows.slice(start, start + chunkSize);
+    const params: unknown[] = [];
+    const tuples = chunk.map((row) => {
+      const placeholders = row.map((val) => {
+        params.push(val);
+        return `$${params.length}`;
+      });
+      return `(${placeholders.join(",")})`;
+    });
+    await q.query(`INSERT INTO ${table} (${columns.join(",")}) VALUES ${tuples.join(",")}`, params);
+  }
+}
+
 export interface PersistRecordInput {
   rowNumber: number;
   sourceRowId: string | null;
@@ -98,33 +125,49 @@ export async function insertBatch(db: Db, input: CreateBatchInput): Promise<stri
       ],
     );
 
+    // Pre-generate record ids so we can bulk-insert records and their issues
+    // separately while keeping the foreign-key link.
+    const recordRows: unknown[][] = [];
+    const issueRows: unknown[][] = [];
     for (const rec of input.records) {
       const recordId = randomUUID();
-      await q.query(
-        `INSERT INTO ingested_records
-           (id, batch_id, row_number, source_row_id, raw, normalized, validation_status, review_status, error_count, warning_count)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [
+      recordRows.push([
+        recordId,
+        batchId,
+        rec.rowNumber,
+        rec.sourceRowId,
+        JSON.stringify(rec.raw),
+        rec.normalized ? JSON.stringify(rec.normalized) : null,
+        rec.validationStatus,
+        rec.reviewStatus,
+        rec.errorCount,
+        rec.warningCount,
+      ]);
+      for (const issue of rec.issues) {
+        issueRows.push([
+          randomUUID(),
           recordId,
           batchId,
-          rec.rowNumber,
-          rec.sourceRowId,
-          JSON.stringify(rec.raw),
-          rec.normalized ? JSON.stringify(rec.normalized) : null,
-          rec.validationStatus,
-          rec.reviewStatus,
-          rec.errorCount,
-          rec.warningCount,
-        ],
-      );
-      for (const issue of rec.issues) {
-        await q.query(
-          `INSERT INTO validation_issues (id, record_id, batch_id, field, issue_type, severity, message)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [randomUUID(), recordId, batchId, issue.field, issue.issueType, issue.severity, issue.message],
-        );
+          issue.field,
+          issue.issueType,
+          issue.severity,
+          issue.message,
+        ]);
       }
     }
+
+    await bulkInsert(
+      q,
+      "ingested_records",
+      ["id", "batch_id", "row_number", "source_row_id", "raw", "normalized", "validation_status", "review_status", "error_count", "warning_count"],
+      recordRows,
+    );
+    await bulkInsert(
+      q,
+      "validation_issues",
+      ["id", "record_id", "batch_id", "field", "issue_type", "severity", "message"],
+      issueRows,
+    );
   });
   return batchId;
 }

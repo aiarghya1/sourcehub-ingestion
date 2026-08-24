@@ -49,4 +49,12 @@ describe("parseJson", () => {
   it("rejects invalid JSON", () => {
     expect(() => parseJson("{not json")).toThrow(InvalidFormatError);
   });
+
+  it("does not pollute Object.prototype via a __proto__ header key", () => {
+    parseJson('[{"__proto__":"polluted","a":1}]');
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    // A __proto__ CSV header must not corrupt the prototype chain either.
+    parseCsv("__proto__,a\nx,1\n");
+    expect(Object.prototype).toBe(Object.getPrototypeOf({}));
+  });
 });
