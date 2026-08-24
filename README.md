@@ -340,12 +340,12 @@ enum and data model already anticipate this — no schema change needed.
 
 ## Testing
 
-The suite covers the full pyramid — **unit → integration → e2e** — with **36 automated
-tests**.
+The suite covers the full pyramid — **unit → integration → e2e** — with **43 automated
+tests** (29 backend, 12 frontend, 2 e2e).
 
 ```bash
-npm test          # backend: unit + API integration (Vitest, 26 tests)
-npm run test:web  # frontend: component/unit (Vitest + React Testing Library, 8 tests)
+npm test          # backend: unit + API integration (Vitest, 29 tests)
+npm run test:web  # frontend: component/unit (Vitest + React Testing Library, 12 tests)
 npm run test:all  # both of the above
 npm run typecheck # backend type safety
 
