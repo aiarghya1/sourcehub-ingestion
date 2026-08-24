@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/batchlist.tsx","./src/components/batchsummary.tsx","./src/components/recorddetail.tsx","./src/components/recordstable.tsx","./src/components/uploadpanel.tsx","./src/components/badges.tsx","./src/lib/api.ts","./src/lib/types.ts","./vite.config.ts"],"version":"5.9.3"}

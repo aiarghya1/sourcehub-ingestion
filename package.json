@@ -1,0 +1,40 @@
+{
+  "name": "sourcehub-ingestion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SourceHub client-deliverable ingestion, validation, and review feature",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "migrate": "tsx src/db/migrate.ts",
+    "dev:api": "tsx watch src/index.ts",
+    "dev:web": "npm run dev --workspace web",
+    "dev": "concurrently -n api,web -c blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "build:api": "tsc -p tsconfig.json && cp src/db/schema.sql dist/db/schema.sql",
+    "build:web": "npm run build --workspace web",
+    "build": "npm run build:api && npm run build:web",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.2.17",
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.5",
+    "@types/pg": "^8.11.10",
+    "concurrently": "^9.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

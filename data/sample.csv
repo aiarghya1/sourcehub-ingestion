@@ -1,0 +1,21 @@
+source_row_id,client_name,entity_name,state,jurisdiction_type,tax_year,period_start,period_end,gross_sales,transaction_count,filing_frequency,nexus_indicator,notes
+1,Acme Manufacturing,Acme West LLC,CO,State,2025,2025-01-01,2025-03-31,125000.50,342,Quarterly,Yes,Imported from client workbook
+2,Blue Ridge Foods,Blue Ridge Foods Inc,TX,State,2025,2025-01-01,2025-03-31,98230.00,201,Monthly,No,"Multi-location retailer, TX only"
+3,Cascade Analytics,Cascade Analytics LLC,CA,State,2025,2025-04-01,2025-06-30,410500.75,1290,Quarterly,true,
+4,Delta Logistics,Delta Logistics LLC,ZZ,State,2025,2025-01-01,2025-03-31,50000.00,88,Quarterly,Yes,Invalid state abbreviation
+5,Everest Retail,Everest Retail Co,WA,State,2025,2025-13-40,2025-03-31,72000.00,150,Monthly,No,Invalid start date
+6,Foxtrot Supply,Foxtrot Supply LLC,NY,State,2025,2025-06-30,2025-01-01,88000.00,410,Quarterly,Yes,Period end before start
+7,Golden Gate Textiles,GGT Holdings,CA,State,2025,2025-01-01,2025-03-31,-15000.00,73,Monthly,Yes,Negative gross sales
+8,Harbor Freight Partners,Harbor LLC,FL,State,2025,2025-01-01,2025-03-31,64000.00,many,Quarterly,No,Non-numeric transaction count
+9,Ionwave Systems,Ionwave Inc,AZ,State,2025,2025-01-01,2025-03-31,150000.00,520,Fortnightly,Yes,Unknown filing frequency
+10,Juniper Brands,Juniper Brands LLC,GA,State,2025,2025-07-01,2025-09-30,205000.00,610,Quarterly,Yes,Duplicate source_row_id
+10,Juniper Brands,Juniper East LLC,GA,State,2025,2025-07-01,2025-09-30,205000.00,610,Quarterly,Yes,Duplicate source_row_id
+12,Kestrel Media,Kestrel Media LLC,OR,State,2025,2025-01-01,2025-03-31,33000.00,99,Monthly,Maybe,Ambiguous nexus indicator
+13,Lumen Works,,IL,State,2025,2025-04-01,2025-06-30,121000.00,300,Quarterly,No,Blank entity name
+14,,Meridian Ops LLC,PA,State,2025,2025-01-01,2025-03-31,54000.00,140,Quarterly,Yes,Missing client_name
+15,Nimbus Cloud,Nimbus Cloud LLC,VA,State,2025,2025-01-01,2025-03-31,89000.00,240,Quarterly,Yes,Malformed row: extra column,EXTRA_VALUE
+16,Orchard Systems,Orchard LLC,NC,State,2025,2025-01-01
+17,Pinnacle Group,Pinnacle Group LLC,NV,State,twenty,2025-01-01,2025-03-31,47000.00,120,Monthly,No,Non-numeric tax year
+18,Quartz Retail,Quartz Retail LLC,MA,State,1899,2025-01-01,2025-03-31,63000.00,180,Quarterly,No,Out-of-range tax year (warning)
+19,Redwood Traders,Redwood Traders LLC,MI,State,2025,2025-10-01,2025-12-31,155250.25,505,Annually,1,"Notes with, embedded comma and ""quotes"""
+20,Summit Provisions,Summit Provisions LLC,OH,State,2025,2025-01-01,2025-03-31,98000.00,410,Quarterly,N,Clean valid row
