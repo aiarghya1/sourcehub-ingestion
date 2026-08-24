@@ -13,6 +13,7 @@ import {
 } from "../../ingestion/service.js";
 import {
   getBatch,
+  getIssuesForBatch,
   getIssuesForRecord,
   getIssuesForRecords,
   getRecord,
@@ -161,6 +162,17 @@ export function makeRouter(db: Db): Router {
         records: records.map((rec) => serializeRecord(rec, byRecord.get(rec.id) ?? [])),
         pagination: { total, limit: q.data.limit, offset: q.data.offset },
       });
+    }),
+  );
+
+  // --- All validation issues for a batch ----------------------------------
+  r.get(
+    "/batches/:id/issues",
+    asyncHandler(async (req, res) => {
+      const batch = await getBatch(db, req.params.id!);
+      if (!batch) throw notFound("Batch not found.");
+      const issues = await getIssuesForBatch(db, req.params.id!);
+      res.json({ issues: issues.map((i) => ({ ...serializeIssue(i), recordId: i.record_id })) });
     }),
   );
 

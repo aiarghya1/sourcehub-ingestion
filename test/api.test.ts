@@ -65,6 +65,15 @@ describe("ingestion API", () => {
     }
   });
 
+  it("returns all validation issues for a batch", async () => {
+    const res = await fetch(`${base}/api/batches/${batchId}/issues`);
+    const json = await res.json();
+    expect(Array.isArray(json.issues)).toBe(true);
+    expect(json.issues.length).toBeGreaterThan(0);
+    expect(json.issues[0]).toHaveProperty("recordId");
+    expect(json.issues[0]).toHaveProperty("severity");
+  });
+
   it("updates review status and persists it", async () => {
     const list = await (await fetch(`${base}/api/batches/${batchId}/records?validationStatus=invalid&limit=1`)).json();
     const recordId = list.records[0].id;

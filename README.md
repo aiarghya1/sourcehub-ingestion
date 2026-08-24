@@ -182,6 +182,7 @@ Base path `/api`. All responses are JSON. Errors use a consistent envelope:
 | `GET /api/batches`                     | List all batches (newest first) with summary counts + status.        |
 | `GET /api/batches/:id`                 | One batch.                                                            |
 | `GET /api/batches/:id/records`         | Records for a batch, **filterable** (`validationStatus`, `reviewStatus`) and **paginated** (`limit`, `offset`). Each record embeds its `issues`. |
+| `GET /api/batches/:id/issues`          | **All validation issues for a batch** (each with its `recordId`).     |
 | `GET /api/records/:id`                 | One record with its full issue list.                                  |
 | `PATCH /api/records/:id/review`        | **Update review status.** Body `{ reviewStatus, note? }`. Sets/clears `reviewed_at`. |
 
