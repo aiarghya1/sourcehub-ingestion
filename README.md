@@ -10,6 +10,10 @@ through a web UI.
 End-to-end slice: upload → parse → validate (row-level + cross-row) → persist →
 review queue → per-record resolution.
 
+> **Deploy:** the app runs as one Node process (API + built SPA) and is
+> container-verified. See [DEPLOY.md](DEPLOY.md) — a Render blueprint (`render.yaml`)
+> and a `Dockerfile` are included for one-click / one-command hosting.
+
 ---
 
 ## Table of contents
