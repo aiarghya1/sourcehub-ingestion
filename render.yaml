@@ -1,0 +1,25 @@
+# Render Blueprint — deploys the API + built SPA as one web service.
+# Go live: push this repo to GitHub (done), then in the Render dashboard choose
+# "New +" → "Blueprint" and point it at this repo. Render reads this file.
+#
+# The app serves both the JSON API and the built React SPA from one process, and
+# creates its schema on boot, so no separate migrate/release step is needed.
+services:
+  - type: web
+    name: sourcehub-ingestion
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Render injects PORT automatically; the app reads process.env.PORT.
+      # The default embedded PGlite DB lives on the instance disk, which is
+      # EPHEMERAL on the free plan (resets on redeploy/restart) — fine for a
+      # demo (re-ingest the sample). For durable storage, set DATABASE_URL to a
+      # managed Postgres (e.g. Supabase) and the app uses it automatically:
+      # - key: DATABASE_URL
+      #   sync: false
