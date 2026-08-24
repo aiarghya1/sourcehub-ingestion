@@ -1,5 +1,7 @@
 # SourceHub — Client Deliverable Ingestion Workbench
 
+[![CI](https://github.com/aiarghya1/sourcehub-ingestion/actions/workflows/ci.yml/badge.svg)](https://github.com/aiarghya1/sourcehub-ingestion/actions/workflows/ci.yml)
+
 A small full-stack feature that lets a SourceHub user **ingest** a client-provided
 sales-activity deliverable (CSV or JSON), **validate** every record against data-quality
 rules, **store** the batch and records, and **review / resolve** data quality issues
