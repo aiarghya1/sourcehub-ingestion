@@ -337,17 +337,39 @@ enum and data model already anticipate this — no schema change needed.
 
 ## Testing
 
+The suite covers the full pyramid — **unit → integration → e2e** — with **36 automated
+tests**.
+
 ```bash
-npm test        # Vitest: 26 tests across parse / validate / api
-npm run typecheck
+npm test          # backend: unit + API integration (Vitest, 26 tests)
+npm run test:web  # frontend: component/unit (Vitest + React Testing Library, 8 tests)
+npm run test:all  # both of the above
+npm run typecheck # backend type safety
+
+# End-to-end (real browser -> UI -> API -> DB), one-time browser setup:
+npx playwright install chromium
+npm run build && npm run e2e   # Playwright, 2 tests
 ```
 
-- **`parse.test.ts`** — quoted fields with embedded commas/quotes/newlines, malformed
-  column counts, empty dataset, header-only, JSON parsing + rejection.
-- **`validate.test.ts`** — every validation rule (valid path, each error, each warning,
-  malformed short-circuit) plus cross-row duplicate detection.
-- **`api.test.ts`** — spins up the real Express app against an in-memory PGlite DB and
-  exercises ingest → list → filter → review → failed-upload → 404.
+**Unit** (`test/parse.test.ts`, `test/validate.test.ts`)
+- Parser: quoted fields with embedded commas/quotes/newlines, malformed column counts,
+  empty dataset, header-only, JSON parsing + rejection, prototype-pollution guard.
+- Validation: every rule (valid path, each error, each warning, malformed short-circuit)
+  plus cross-row duplicate detection.
+
+**Integration** (`test/api.test.ts`)
+- Spins up the real Express app against an in-memory PGlite DB and exercises ingest →
+  list → batch issues → filter → review → **3000-row bulk insert** → failed-upload → 404.
+
+**Frontend component** (`web/src/**/*.test.tsx`)
+- Badges render correct labels/classes; `RecordsTable` flags invalid rows and fires
+  selection; `App` loads batches, auto-selects, filters by status, opens the detail
+  drawer, resolves a record, and shows an error+retry when the API fails (API mocked).
+
+**End-to-end** (`e2e/ingestion.spec.ts`, Playwright)
+- Drives the built app in a real browser: ingest the sample → see "Completed with Issues"
+  → filter to invalid → open a flagged record → read its issue → mark resolved; plus the
+  empty-upload failure path.
 
 ---
 
