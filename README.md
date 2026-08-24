@@ -145,7 +145,7 @@ don't depend on DB extensions.
 | `batch_id`                        | FK → `ingestion_batches` (cascade delete)                     |
 | `row_number`                      | 1-based position in the source file (traceability)             |
 | `source_row_id`                   | as provided; may be missing/duplicated                         |
-| `raw` (jsonb)                     | **original row data, untouched**                               |
+| `raw` (jsonb)                     | **parsed source values** — original, untrimmed, header-aligned; extra cells from malformed rows preserved under `column_N` keys |
 | `normalized` (jsonb)              | **typed/normalized values** (null when the row is malformed)   |
 | `validation_status`               | `valid` / `warning` / `invalid` (computed)                     |
 | `review_status`                   | `needs_review` / `reviewed` / `resolved` (workflow)            |
@@ -263,7 +263,7 @@ whole file.
 
 **What data model I chose and why.** The classic three-table shape
 (batch → records → issues) mirrors the domain exactly and keeps issues queryable
-independently of records. I store both `raw` (untouched original) and `normalized`
+independently of records. I store both `raw` (parsed source values, untrimmed) and `normalized`
 (typed) JSON on each record so nothing from the client file is ever lost, while the app
 still gets clean typed values. Counts are denormalized onto the batch and record rows so
 the list/table views render without aggregation queries.
@@ -278,8 +278,9 @@ with an explicit severity so warnings don't block a record the way errors do.
 
 **What frontend states I accounted for.** Loading (batches, records), error (with retry),
 empty (no batches / no records / filtered-to-nothing), ingesting (busy button), failed
-ingestion (surfaced inline and as a `failed` batch in history), row-level issue
-highlighting, and the review-in-progress state on the drawer.
+ingestion (surfaced inline **and** immediately reflected as a `failed` batch in history —
+no manual reload), paginated records (Prev/Next with a "Showing a–b of N" indicator),
+row-level issue highlighting, and the review-in-progress state on the drawer.
 
 **What would change for larger files or async processing.** Today's synchronous path is
 fine for the exercise scale. For large files I'd: (a) accept the upload, immediately
@@ -384,8 +385,9 @@ npm run build && npm run e2e   # Playwright, 2 tests
   scope batches to an org/user, gate the API, and rate-limit ingestion.
 - **File upload** goes through a JSON body (frontend reads file text). Production would use
   streamed multipart upload for large files and store the original blob (S3) for audit.
-- **Pagination** exists in the API but the UI loads a generous page; production would add
-  server-driven paging controls and virtualized rows.
+- **Pagination** — the UI has server-driven Prev/Next paging (50/page) with a
+  "Showing a–b of N" indicator; a production build would add page-size controls and row
+  virtualization for very large batches.
 - **Re-validation** — issues are computed at ingest time. A production system would let you
   re-run rules (e.g. after a rules change) and version rule sets.
 - **Richer review workflow** — assignees, audit trail of status transitions, bulk

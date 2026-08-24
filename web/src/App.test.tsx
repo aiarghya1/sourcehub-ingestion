@@ -93,6 +93,18 @@ describe("App", () => {
     await waitFor(() => expect(within(drawer).getByText("Resolved")).toBeInTheDocument());
   });
 
+  it("paginates: shows the range and requests the next page by offset", async () => {
+    const page1 = Array.from({ length: 50 }, (_, i) => ({ ...invalidRecord, id: `p1-${i}`, rowNumber: i + 1 }));
+    mockApi.listRecords.mockResolvedValue({ records: page1, pagination: { total: 120, limit: 50, offset: 0 } });
+    render(<App />);
+    expect(await screen.findByText("Showing 1–50 of 120")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() =>
+      expect(mockApi.listRecords).toHaveBeenLastCalledWith("b1", expect.objectContaining({ offset: 50, limit: 50 })),
+    );
+  });
+
   it("shows an error with retry when batches fail to load", async () => {
     const { ApiError } = await import("./lib/api");
     mockApi.listBatches.mockRejectedValueOnce(new ApiError(500, "boom"));

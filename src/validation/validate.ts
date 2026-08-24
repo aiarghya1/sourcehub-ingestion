@@ -60,11 +60,12 @@ export function validateRow(row: ParsedRow): RowValidation {
   ) => issues.push({ field: fieldName, issueType, severity, message });
 
   if (row.malformed) {
+    const reason = row.malformedReason ?? "cannot be aligned to the header";
     add(
       null,
       IssueType.MalformedRow,
       Severity.Error,
-      `Row has ${row.cells.length} columns but the header defines a different number; cannot align fields reliably.`,
+      `Malformed row: ${reason}. Fields cannot be aligned reliably; original cells are preserved.`,
     );
     return finalize(null, issues);
   }

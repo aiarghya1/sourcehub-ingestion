@@ -2,10 +2,12 @@ import { RawRecord } from "../domain/types.js";
 
 export interface ParsedRow {
   rowNumber: number; // 1-based data row index (header is not counted)
-  cells: string[];
-  raw: RawRecord; // header -> cell, using best-effort alignment
-  /** True when the column count does not match the header (malformed row). */
+  cells: string[]; // every original cell, untrimmed, exactly as tokenized
+  raw: RawRecord; // header -> value; extra cells preserved under column_N keys
+  /** True when the row cannot be aligned to the header (bad column count / bad quoting). */
   malformed: boolean;
+  /** Why the row is malformed, for a precise validation message. */
+  malformedReason?: string;
 }
 
 export interface ParseResult {
@@ -26,7 +28,7 @@ const safeKey = (key: string): string => (UNSAFE_KEYS.has(key) ? `_${key}` : key
  * so downstream validation can decide what to do with imperfect data rather
  * than the parser silently dropping it.
  */
-function tokenize(input: string): string[][] {
+function tokenize(input: string): { rows: string[][]; unterminatedQuote: boolean } {
   const rows: string[][] = [];
   let field = "";
   let row: string[] = [];
@@ -67,8 +69,10 @@ function tokenize(input: string): string[][] {
     row.push(field);
     rows.push(row);
   }
-  if (!sawAny) return [];
-  return rows;
+  if (!sawAny) return { rows: [], unterminatedQuote: false };
+  // If we ended while still inside a quote, the last row swallowed the rest of
+  // the file (commas/newlines became literal): it cannot be trusted as aligned.
+  return { rows, unterminatedQuote: inQuotes };
 }
 
 /** Parse CSV text into a header plus aligned data rows. */
@@ -76,7 +80,8 @@ export function parseCsv(text: string): ParseResult {
   const raw = text.replace(/^﻿/, ""); // strip BOM
   if (raw.trim() === "") throw new EmptyDatasetError("The dataset is empty.");
 
-  const table = tokenize(raw).filter(
+  const { rows: tokenized, unterminatedQuote } = tokenize(raw);
+  const table = tokenized.filter(
     // drop fully-blank lines (a single empty cell and nothing else)
     (r) => !(r.length === 1 && r[0]!.trim() === ""),
   );
@@ -89,14 +94,33 @@ export function parseCsv(text: string): ParseResult {
 
   const rows: ParsedRow[] = table.slice(1).map((cells, idx) => {
     const malformed = cells.length !== header.length;
+    // Store values untrimmed so `raw` is the parsed original; the validation
+    // layer trims at point of use. Extra cells beyond the header are preserved
+    // under column_N keys so no data from a malformed row is lost.
     const rawObj: RawRecord = {};
     header.forEach((key, i) => {
-      rawObj[safeKey(key)] = (cells[i] ?? "").trim();
+      rawObj[safeKey(key)] = cells[i] ?? "";
     });
-    return { rowNumber: idx + 1, cells, raw: rawObj, malformed };
+    for (let i = header.length; i < cells.length; i++) {
+      rawObj[`column_${i + 1}`] = cells[i] ?? "";
+    }
+    const row: ParsedRow = { rowNumber: idx + 1, cells, raw: rawObj, malformed };
+    if (malformed) {
+      row.malformedReason = `has ${cells.length} columns but the header defines ${header.length}`;
+    }
+    return row;
   });
 
   if (rows.length === 0) throw new EmptyDatasetError("The dataset has a header but no data rows.");
+
+  // An unterminated quoted field corrupts the final row's boundaries: flag it
+  // malformed so its data is preserved and surfaced rather than silently trusted.
+  if (unterminatedQuote && rows.length > 0) {
+    const last = rows[rows.length - 1]!;
+    last.malformed = true;
+    last.malformedReason = "contains an unterminated quoted field (missing closing quote)";
+  }
+
   return { header, rows };
 }
 
@@ -126,7 +150,7 @@ export function parseJson(text: string): ParseResult {
     if (!malformed) {
       for (const key of header) {
         const val = (row as Record<string, unknown>)[key];
-        rawObj[safeKey(key)] = val == null ? "" : String(val).trim();
+        rawObj[safeKey(key)] = val == null ? "" : String(val);
       }
     }
     return { rowNumber: idx + 1, cells: Object.values(rawObj), raw: rawObj, malformed };

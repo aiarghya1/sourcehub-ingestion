@@ -2,7 +2,12 @@ import type { Batch, Pagination, Record, ReviewStatus, ValidationStatus } from "
 
 /** Thin typed fetch wrapper with a consistent error surface. */
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    /** The parsed response body, if any — e.g. a failed batch on a 400. */
+    public body?: { batch?: Batch; error?: { code?: string } },
+  ) {
     super(message);
   }
 }
@@ -20,7 +25,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const message = body?.error?.message ?? `Request failed (${res.status})`;
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, body);
   }
   return body as T;
 }

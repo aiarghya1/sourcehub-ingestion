@@ -12,6 +12,8 @@ interface Filters {
   reviewStatus?: ReviewStatus;
 }
 
+const PAGE_SIZE = 50;
+
 export function App() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [batchesError, setBatchesError] = useState<string | null>(null);
@@ -22,6 +24,8 @@ export function App() {
   const [recordsError, setRecordsError] = useState<string | null>(null);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [filters, setFilters] = useState<Filters>({});
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
 
   const [selected, setSelected] = useState<Record | null>(null);
   const [reviewBusy, setReviewBusy] = useState(false);
@@ -40,15 +44,21 @@ export function App() {
     }
   }, []);
 
-  const loadRecords = useCallback(async (batchId: string, f: Filters) => {
+  const loadRecords = useCallback(async (batchId: string, f: Filters, pageOffset: number) => {
     setLoadingRecords(true);
     setRecordsError(null);
     try {
-      const { records } = await api.listRecords(batchId, f);
+      const { records, pagination } = await api.listRecords(batchId, {
+        ...f,
+        limit: PAGE_SIZE,
+        offset: pageOffset,
+      });
       setRecords(records);
+      setTotal(pagination.total);
     } catch (e) {
       setRecordsError(e instanceof ApiError ? e.message : "Failed to load records.");
       setRecords([]);
+      setTotal(0);
     } finally {
       setLoadingRecords(false);
     }
@@ -69,14 +79,25 @@ export function App() {
   useEffect(() => {
     if (selectedBatchId) {
       setSelected(null);
-      loadRecords(selectedBatchId, filters);
+      loadRecords(selectedBatchId, filters, offset);
     }
-  }, [selectedBatchId, filters, loadRecords]);
+  }, [selectedBatchId, filters, offset, loadRecords]);
+
+  // Selecting a batch or changing filters resets to the first page.
+  function selectBatch(id: string) {
+    setSelectedBatchId(id);
+    setOffset(0);
+    setSelected(null);
+  }
+  function updateFilters(next: Filters) {
+    setFilters(next);
+    setOffset(0);
+  }
 
   async function handleIngested(batch: Batch) {
     await loadBatches();
     if (batch.status !== "failed") {
-      setFilters({});
+      updateFilters({});
       setSelectedBatchId(batch.id);
     }
   }
@@ -114,7 +135,7 @@ export function App() {
             ) : batchesError ? (
               <ErrorBox message={batchesError} onRetry={loadBatches} />
             ) : (
-              <BatchList batches={batches} selectedId={selectedBatchId} onSelect={setSelectedBatchId} />
+              <BatchList batches={batches} selectedId={selectedBatchId} onSelect={selectBatch} />
             )}
           </div>
         </aside>
@@ -131,7 +152,7 @@ export function App() {
                   label="Validation"
                   value={filters.validationStatus ?? ""}
                   onChange={(v) =>
-                    setFilters((f) => ({ ...f, validationStatus: (v || undefined) as ValidationStatus | undefined }))
+                    updateFilters({ ...filters, validationStatus: (v || undefined) as ValidationStatus | undefined })
                   }
                   options={[
                     ["", "All"],
@@ -144,7 +165,7 @@ export function App() {
                   label="Review"
                   value={filters.reviewStatus ?? ""}
                   onChange={(v) =>
-                    setFilters((f) => ({ ...f, reviewStatus: (v || undefined) as ReviewStatus | undefined }))
+                    updateFilters({ ...filters, reviewStatus: (v || undefined) as ReviewStatus | undefined })
                   }
                   options={[
                     ["", "All"],
@@ -154,13 +175,17 @@ export function App() {
                   ]}
                 />
                 {(filters.validationStatus || filters.reviewStatus) && (
-                  <button className="btn btn--ghost small" onClick={() => setFilters({})}>
+                  <button className="btn btn--ghost small" onClick={() => updateFilters({})}>
                     Clear filters
                   </button>
                 )}
-                <span className="toolbar__count small muted">
-                  {records.length} record{records.length === 1 ? "" : "s"} shown
-                </span>
+                <Pager
+                  offset={offset}
+                  count={records.length}
+                  total={total}
+                  onPrev={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
+                  onNext={() => setOffset((o) => o + PAGE_SIZE)}
+                />
               </div>
 
               <div className="content">
@@ -168,7 +193,7 @@ export function App() {
                   {loadingRecords ? (
                     <p className="muted" style={{ padding: "1rem" }}>Loading records…</p>
                   ) : recordsError ? (
-                    <ErrorBox message={recordsError} onRetry={() => loadRecords(selectedBatch.id, filters)} />
+                    <ErrorBox message={recordsError} onRetry={() => loadRecords(selectedBatch.id, filters, offset)} />
                   ) : (
                     <RecordsTable records={records} selectedId={selected?.id ?? null} onSelect={setSelected} />
                   )}
@@ -186,6 +211,36 @@ export function App() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function Pager({
+  offset,
+  count,
+  total,
+  onPrev,
+  onNext,
+}: {
+  offset: number;
+  count: number;
+  total: number;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  const start = total === 0 ? 0 : offset + 1;
+  const end = offset + count;
+  return (
+    <div className="pager">
+      <span className="small muted">
+        {total === 0 ? "No records" : `Showing ${start}–${end} of ${total}`}
+      </span>
+      <button className="btn btn--ghost small" onClick={onPrev} disabled={offset === 0}>
+        ‹ Prev
+      </button>
+      <button className="btn btn--ghost small" onClick={onNext} disabled={end >= total}>
+        Next ›
+      </button>
     </div>
   );
 }

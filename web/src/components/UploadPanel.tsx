@@ -34,8 +34,7 @@ export function UploadPanel({ onIngested }: Props) {
       setLabel("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (e) {
-      // A parse-level failure (400) still creates a FAILED batch; surface both.
-      setError(e instanceof ApiError ? e.message : "Ingestion failed.");
+      handleFailure(e);
     } finally {
       setBusy(false);
     }
@@ -48,9 +47,23 @@ export function UploadPanel({ onIngested }: Props) {
       onIngested(await api.ingestSample(label.trim() || "Sample client deliverable"));
       setLabel("");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Ingestion failed.");
+      handleFailure(e);
     } finally {
       setBusy(false);
+    }
+  }
+
+  /**
+   * A parse-level failure (400) still records a FAILED batch. Surface the message
+   * and push that failed batch up so the batch history refreshes immediately
+   * (no manual page reload needed).
+   */
+  function handleFailure(e: unknown) {
+    if (e instanceof ApiError) {
+      setError(e.message);
+      if (e.body?.batch) onIngested(e.body.batch);
+    } else {
+      setError("Ingestion failed.");
     }
   }
 

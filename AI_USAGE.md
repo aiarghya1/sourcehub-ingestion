@@ -45,9 +45,9 @@
 ## How I verified the code
 
 - `npm run typecheck` (backend) and `tsc -b` (frontend) both clean.
-- **23 automated tests** pass: CSV/JSON parsing edge cases, every validation rule,
-  cross-row duplicate detection, and a full API integration test against an in-memory
-  Postgres (PGlite).
+- **The full test pyramid passes**: unit (CSV/JSON parsing edge cases, every validation
+  rule, cross-row duplicates), API integration against an in-memory Postgres (PGlite),
+  frontend component tests (React Testing Library), and Playwright e2e in a real browser.
 - **Manual end-to-end run in a browser**: ingested the sample dataset, confirmed the
   20-row split (5 valid / 4 warning / 11 invalid), opened flagged records, read the issue
   detail, filtered by status, and marked a record resolved — then re-queried the API to

@@ -124,6 +124,8 @@ h1, h2, h3, h4 { margin: 0; }
 .filter__label { text-transform: uppercase; letter-spacing: 0.03em; }
 .select { width: auto; min-width: 130px; }
 .toolbar__count { margin-left: auto; }
+.pager { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.pager .btn { border-color: var(--border-strong); }
 
 /* ---- content split ---- */
 .content { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }

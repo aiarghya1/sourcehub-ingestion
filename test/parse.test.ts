@@ -26,6 +26,26 @@ describe("parseCsv", () => {
     expect(rows[1]!.malformed).toBe(true);
   });
 
+  it("flags a row with an unterminated quoted field as malformed", () => {
+    // Right column count, but the opening quote is never closed.
+    const { rows } = parseCsv('a,b\nx,"unclosed');
+    expect(rows[0]!.malformed).toBe(true);
+    expect(rows[0]!.malformedReason).toMatch(/unterminated/i);
+  });
+
+  it("preserves extra cells from a malformed row under column_N keys", () => {
+    const { rows } = parseCsv("a,b\n1,2,EXTRA\n");
+    expect(rows[0]!.malformed).toBe(true);
+    expect(rows[0]!.raw.column_3).toBe("EXTRA");
+    expect(rows[0]!.cells).toEqual(["1", "2", "EXTRA"]);
+  });
+
+  it("stores raw values untrimmed (normalization trims later)", () => {
+    const { rows } = parseCsv("a,b\n 1 , 2 \n");
+    expect(rows[0]!.raw.a).toBe(" 1 ");
+    expect(rows[0]!.raw.b).toBe(" 2 ");
+  });
+
   it("throws on an empty dataset", () => {
     expect(() => parseCsv("   \n  ")).toThrow(EmptyDatasetError);
   });
