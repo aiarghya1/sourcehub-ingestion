@@ -93,6 +93,28 @@ describe("App", () => {
     await waitFor(() => expect(within(drawer).getByText("Resolved")).toBeInTheDocument());
   });
 
+  it("re-fetches the page after a review change while a review filter is active", async () => {
+    mockApi.updateReview.mockResolvedValue({ ...invalidRecord, reviewStatus: "resolved" });
+    render(<App />);
+    await screen.findByText("Delta");
+
+    // Activate the "Needs Review" review filter (second combobox).
+    const reviewSelect = screen.getAllByRole("combobox")[1]!;
+    await userEvent.selectOptions(reviewSelect, "needs_review");
+    await waitFor(() =>
+      expect(mockApi.listRecords).toHaveBeenLastCalledWith("b1", expect.objectContaining({ reviewStatus: "needs_review" })),
+    );
+
+    const callsBefore = mockApi.listRecords.mock.calls.length;
+    await userEvent.click(screen.getByText("Delta"));
+    const drawer = screen.getByText("Row 4").closest("aside")!;
+    await userEvent.click(within(drawer).getByRole("button", { name: /mark resolved/i }));
+
+    // The record no longer matches the filter, so the page is re-fetched.
+    await waitFor(() => expect(mockApi.listRecords.mock.calls.length).toBe(callsBefore + 1));
+    expect(mockApi.listRecords).toHaveBeenLastCalledWith("b1", expect.objectContaining({ reviewStatus: "needs_review" }));
+  });
+
   it("paginates: shows the range and requests the next page by offset", async () => {
     const page1 = Array.from({ length: 50 }, (_, i) => ({ ...invalidRecord, id: `p1-${i}`, rowNumber: i + 1 }));
     mockApi.listRecords.mockResolvedValue({ records: page1, pagination: { total: 120, limit: 50, offset: 0 } });

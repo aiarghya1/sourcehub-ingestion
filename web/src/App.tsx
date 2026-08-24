@@ -108,7 +108,13 @@ export function App() {
     try {
       const updated = await api.updateReview(selected.id, status, note);
       setSelected(updated);
+      // Optimistic in-place update for instant feedback.
       setRecords((prev) => prev.map((r) => (r.id === updated.id ? { ...updated, issues: r.issues } : r)));
+      // If a review-status filter is active, the record may no longer match it —
+      // re-fetch the current page so the list and the "Showing a–b of N" count stay accurate.
+      if (filters.reviewStatus && selectedBatchId) {
+        await loadRecords(selectedBatchId, filters, offset);
+      }
     } catch (e) {
       setRecordsError(e instanceof ApiError ? e.message : "Failed to update review status.");
     } finally {
