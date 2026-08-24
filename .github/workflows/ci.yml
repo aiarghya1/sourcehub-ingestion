@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: typecheck · unit · integration · e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (backend + frontend)
+        run: |
+          npm run typecheck
+          npx tsc -b web
+
+      - name: Unit + integration tests (backend)
+        run: npm test
+
+      - name: Component tests (frontend)
+        run: npm run test:web
+
+      - name: Build (API + SPA)
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run e2e
