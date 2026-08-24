@@ -1,5 +1,8 @@
 # Deploying SourceHub Ingestion
 
+**Live instance:** https://sourcehub-ingestion.onrender.com (Render free tier — first
+request after idle cold-starts in ~30–60s).
+
 The app is a single Node process that serves both the JSON API and the built React
 SPA, and creates its database schema on boot — so any host that runs a long-lived
 Node process will work with no extra release step.

@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/aiarghya1/sourcehub-ingestion/actions/workflows/ci.yml/badge.svg)](https://github.com/aiarghya1/sourcehub-ingestion/actions/workflows/ci.yml)
 
+**▶ Live demo: https://sourcehub-ingestion.onrender.com** — open it and click
+*"Use sample dataset"*. (Hosted on Render's free tier, so the first request after
+idle may take ~30–60s to cold-start.)
+
 A small full-stack feature that lets a SourceHub user **ingest** a client-provided
 sales-activity deliverable (CSV or JSON), **validate** every record against data-quality
 rules, **store** the batch and records, and **review / resolve** data quality issues
